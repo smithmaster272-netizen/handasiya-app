@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>الشركة الهندسية</title>
+<style>
+:root{--b:#1e5aa8;--bd:#0f3d7a;--bg:#f3f6fb;--t:#1b2638;--m:#6b7a90;--l:#dbe3ef;--r:#c62828;--g:#2e7d32}
+*{box-sizing:border-box}
+body{margin:0;font-family:Cairo,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--t);padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+input,select,textarea{width:100%;padding:12px;margin:6px 0;border:1px solid var(--l);border-radius:8px;font:inherit;background:#fff;color:var(--t)}
+.btn{background:var(--b);color:#fff;border:0;padding:12px 18px;border-radius:8px;font:inherit;width:100%;margin-top:8px;cursor:pointer}
+.btn.s{width:auto;padding:8px 14px;margin:0;white-space:nowrap}
+.card{background:#fff;border:1px solid var(--l);border-radius:12px;padding:16px;margin:10px 0}
+.login{max-width:360px;margin:12vh 16px 0;text-align:center}
+@media(min-width:420px){.login{margin-left:auto;margin-right:auto}}
+header{background:var(--bd);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+nav{display:flex;background:#fff;border-bottom:1px solid var(--l)}
+nav button{flex:1;padding:12px 4px;border:0;background:none;font:inherit;color:var(--m);border-bottom:3px solid transparent;cursor:pointer}
+nav button.on{color:var(--b);border-color:var(--b);font-weight:700}
+main{padding:12px 14px;max-width:900px;margin:auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{text-align:center;color:var(--m);margin:0}
+.stat b{display:block;font-size:28px;color:var(--b)}
+.row{background:#fff;border:1px solid var(--l);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:8px;cursor:pointer}
+.m{color:var(--m);font-size:13px}
+.tag{background:#e6effb;color:var(--b);border-radius:20px;padding:2px 10px;font-size:12px;white-space:nowrap;height:fit-content}
+#modal{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;justify-content:center;z-index:9}
+#modal.show{display:flex}
+#modal>div{background:#fff;width:100%;max-width:520px;max-height:90vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+#msg{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--r);color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:10;max-width:90%;text-align:center}
+#msg.show{display:block}
+#msg.ok{background:var(--g)}
+.chk{display:flex;gap:14px;margin:6px 0}
+.chk input{width:auto;margin:0 0 0 4px}
+.top{display:flex;gap:8px;align-items:center}
+.top input{margin:0}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="modal"></div><div id="msg"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const sb=supabase.createClient('https://uoywjtincjozwvufvvuf.supabase.co','sb_publishable_GAIc4vSJ4Vn6VMokJvJ1wQ_G2f7tATi');
+const $=s=>document.querySelector(s),app=$('#app');
+const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const STAT=['قيد الدراسة','متعاقد عليه','لم يبدأ','جاري التنفيذ','متوقف','مكتمل','تم التسليم','مغلق ماليًا'];
+let me=null,tab='home',parties=[],projects=[];
+function msg(t,ok){const m=$('#msg');m.textContent=t;m.className=ok?'show ok':'show';clearTimeout(msg.t);msg.t=setTimeout(()=>m.className='',4000)}
+function err(x){if(x.code==='23505')return'الاسم أو الرقم مكرر، راجع البيانات';if(x.code==='42501')return'ليس لديك صلاحية لهذه العملية';return'حدث خطأ: '+x.message}
+const money=v=>Number(v).toLocaleString('ar-EG')+' ج.م';
+function modal(h){$('#modal').innerHTML='<div>'+h+'<button class="btn" style="background:#8a97ab" onclick="closeM()">إلغاء</button></div>';$('#modal').classList.add('show')}
+function closeM(){$('#modal').classList.remove('show')}
+
+async function init(){const{data:{session}}=await sb.auth.getSession();session?enter():login()}
+function login(){app.innerHTML=`<div class="login card"><h1 style="color:var(--b)">الشركة الهندسية</h1><p class="m">تسجيل الدخول</p><input id="em" type="email" placeholder="البريد الإلكتروني" autocomplete="username" dir="ltr"><input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password" dir="ltr"><button class="btn" onclick="doLogin()">دخول</button></div>`}
+async function doLogin(){msg('جاري الدخول...',1);const{error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return msg('البريد أو كلمة المرور غير صحيحة');$('#msg').className='';enter()}
+async function out(){await sb.auth.signOut();me=null;login()}
+async function enter(){const{data:u}=await sb.auth.getUser();const{data:p}=await sb.from('profiles').select('full_name,is_active,roles(name)').eq('id',u.user.id).single();me=p;
+if(!p||!p.is_active){app.innerHTML='<div class="login card"><h2>الحساب غير مفعّل</h2><p class="m">تواصل مع المالك لتفعيل حسابك.</p><button class="btn" onclick="out()">خروج</button></div>';return}
+app.innerHTML=`<header><div><b>الشركة الهندسية</b><div class="m" style="color:#cfe0fb">${e(me.full_name)} · ${e(me.roles?.name||'')}</div></div><button class="btn s" style="background:#ffffff30" onclick="out()">خروج</button></header><nav>${[['home','الرئيسية'],['parties','العملاء والموردون'],['projects','المشروعات']].map(([k,l])=>`<button id="n_${k}" onclick="go('${k}')">${l}</button>`).join('')}</nav><main id="main"></main>`;go('home')}
+
+async function load(){const[a,b]=await Promise.all([sb.from('parties').select('*').order('name'),sb.from('projects').select('*,parties(name),project_financials(contract_value)').order('created_at',{ascending:false})]);
+if(a.error)msg(err(a.error));if(b.error)msg(err(b.error));parties=a.data||[];projects=b.data||[]}
+async function go(t){tab=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.id==='n_'+t));$('#main').innerHTML='<p class="m">جاري التحميل...</p>';await load();render()}
+function render(){$('#main').innerHTML=tab==='home'?home():tab==='parties'?partiesV():projectsV()}
+
+function home(){const k=x=>parties.filter(p=>p.kinds.includes(x)).length;
+const s=[['إجمالي المشروعات',projects.length],['جاري التنفيذ',projects.filter(p=>p.status==='جاري التنفيذ').length],['العملاء',k('عميل')],['الموردون',k('مورد')],['المقاولون',k('مقاول')]];
+return`<div class="grid">${s.map(([l,n])=>`<div class="card stat"><b>${n}</b>${l}</div>`).join('')}</div><p class="m">باقي مؤشرات اللوحة (المستخلصات، المصروفات، الأرباح) تظهر عند إضافة وحداتها في المراحل التالية.</p>`}
+
+const plist=q=>parties.filter(p=>p.name.includes(q)).map(p=>`<div class="row" onclick="partyForm('${p.id}')"><div><b>${e(p.name)}</b><div class="m">${p.kinds.join(' · ')}${p.phone?' · '+e(p.phone):''}</div></div></div>`).join('')||'<p class="m">لا توجد بيانات بعد</p>';
+function partiesV(){return`<div class="top"><input id="q" placeholder="بحث بالاسم" oninput="$('#lp').innerHTML=plist(this.value)"><button class="btn s" onclick="partyForm()">+ إضافة</button></div><div id="lp">${plist('')}</div>`}
+function partyForm(id){const p=parties.find(x=>x.id===id)||{kinds:['عميل']};
+modal(`<h3>${id?'تعديل':'إضافة'} جهة</h3><input id="f_name" placeholder="الاسم *" value="${e(p.name)}"><div class="chk" id="f_kinds">${['عميل','مورد','مقاول'].map(k=>`<label><input type="checkbox" value="${k}" ${p.kinds.includes(k)?'checked':''}>${k}</label>`).join('')}</div><input id="f_phone" placeholder="الهاتف" value="${e(p.phone)}" dir="ltr"><input id="f_email" placeholder="البريد الإلكتروني" value="${e(p.email)}" dir="ltr"><input id="f_addr" placeholder="العنوان" value="${e(p.address)}"><input id="f_tax" placeholder="الرقم الضريبي" value="${e(p.tax_no)}" dir="ltr"><textarea id="f_notes" placeholder="ملاحظات" rows="2">${e(p.notes)}</textarea><button class="btn" onclick="saveParty('${id||''}')">حفظ</button>`)}
+async function saveParty(id){const v=k=>$('#f_'+k).value.trim()||null;const name=v('name'),kinds=[...document.querySelectorAll('#f_kinds input:checked')].map(i=>i.value);
+if(!name)return msg('الاسم مطلوب');if(!kinds.length)return msg('اختر نوعًا واحدًا على الأقل');
+const row={name,kinds,phone:v('phone'),email:v('email'),address:v('addr'),tax_no:v('tax'),notes:v('notes')};msg('جاري الحفظ...',1);
+const r=id?await sb.from('parties').update(row).eq('id',id):await sb.from('parties').insert(row);
+if(r.error)return msg(err(r.error));closeM();await load();render();msg('تم الحفظ',1)}
+
+function projectsV(){return`<div class="top"><div style="flex:1" class="m">${projects.length} مشروع</div><button class="btn s" onclick="projForm()">+ مشروع جديد</button></div>`+(projects.map(p=>{const f=[].concat(p.project_financials||[])[0];
+return`<div class="row" onclick="projForm('${p.id}')"><div><b>${e(p.name)}</b><div class="m">${e(p.code)}${p.parties?' · '+e(p.parties.name):''}${p.location?' · '+e(p.location):''}</div>${f?`<div class="m">قيمة التعاقد: ${money(f.contract_value)}</div>`:''}</div><span class="tag">${e(p.status)}</span></div>`}).join('')||'<p class="m">لا توجد مشروعات بعد</p>')}
+function projForm(id){const p=projects.find(x=>x.id===id)||{status:STAT[0]};const f=[].concat(p.project_financials||[])[0];
+modal(`<h3>${id?'تعديل':'إضافة'} مشروع</h3><input id="f_name" placeholder="اسم المشروع *" value="${e(p.name)}"><select id="f_client"><option value="">العميل (اختياري)</option>${parties.filter(x=>x.kinds.includes('عميل')).map(x=>`<option value="${x.id}" ${x.id===p.client_id?'selected':''}>${e(x.name)}</option>`).join('')}</select><input id="f_loc" placeholder="الموقع" value="${e(p.location)}"><input id="f_cno" placeholder="رقم العقد" value="${e(p.contract_no)}" dir="ltr"><label class="m">تاريخ البداية</label><input id="f_sd" type="date" value="${p.start_date||''}"><label class="m">تاريخ النهاية</label><input id="f_ed" type="date" value="${p.end_date||''}"><select id="f_st">${STAT.map(s=>`<option ${s===p.status?'selected':''}>${s}</option>`).join('')}</select><input id="f_val" type="number" min="0" step="0.01" placeholder="قيمة التعاقد (لمن لديه صلاحية مالية)" value="${f?f.contract_value:''}"><textarea id="f_notes" placeholder="ملاحظات" rows="2">${e(p.notes)}</textarea><button class="btn" onclick="saveProject('${id||''}')">حفظ</button>`)}
+async function saveProject(id){const v=k=>$('#f_'+k).value.trim()||null;const name=v('name');if(!name)return msg('اسم المشروع مطلوب');
+const row={name,client_id:v('client'),location:v('loc'),contract_no:v('cno'),start_date:v('sd'),end_date:v('ed'),status:$('#f_st').value,notes:v('notes')};
+if(row.start_date&&row.end_date&&row.end_date<row.start_date)return msg('تاريخ النهاية قبل تاريخ البداية');msg('جاري الحفظ...',1);
+const r=id?await sb.from('projects').update(row).eq('id',id).select().single():await sb.from('projects').insert(row).select().single();
+if(r.error)return msg(err(r.error));let note='';const val=$('#f_val').value;
+if(val!==''){const f=await sb.from('project_financials').upsert({project_id:r.data.id,contract_value:+val},{onConflict:'project_id'});if(f.error)note='تم حفظ المشروع، لكن القيمة المالية لم تُحفظ: '+err(f.error)}
+closeM();await load();render();msg(note||'تم الحفظ',!note)}
+
+addEventListener('offline',()=>msg('لا يوجد اتصال بالإنترنت'));
+sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&!$('.login'))login()});
+init();
+</script>
+</body>
+</html>
